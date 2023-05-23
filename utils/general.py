@@ -122,13 +122,13 @@ def is_writeable(dir, test=False):
         return False
 
 
-LOGGING_NAME = 'yolov5'
+LOGGING_NAME = 'yolov5' #定义日志名字
 
 
-def set_logging(name=LOGGING_NAME, verbose=True):
+def set_logging(name=LOGGING_NAME, verbose=True): #定义了一个设置日志的方法，传入的参数是日志的名字
     # sets up logging for the given name
-    rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings
-    level = logging.INFO if verbose and rank in {-1, 0} else logging.ERROR
+    rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings,os.getenv()用于获取环境变量的值，这里用于获取RANK的值
+    level = logging.INFO if verbose and rank in {-1, 0} else logging.ERROR #如果verbose为true并且rank的值为0或-1，则将日志level设置为logging.INFO,否则设置为logging.ERROR
     logging.config.dictConfig({
         'version': 1,
         'disable_existing_loggers': False,
