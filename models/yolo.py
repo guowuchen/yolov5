@@ -109,12 +109,13 @@ class Segment(Detect):
 class BaseModel(nn.Module):
     # YOLOv5 base model
     def forward(self, x, profile=False, visualize=False):
+        #x为输入图像；profile=true表示可以做一些性能评估；visualize=true表示可以做一些特征可视化
         return self._forward_once(x, profile, visualize)  # single-scale inference, train
 
     def _forward_once(self, x, profile=False, visualize=False):
         y, dt = [], []  # outputs
-        for m in self.model:
-            if m.f != -1:  # if not from previous layer
+        for m in self.model: #对于模型中的每一层
+            if m.f != -1:  #如果不是来自前一层
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
@@ -165,10 +166,11 @@ class BaseModel(nn.Module):
 class DetectionModel(BaseModel):
     # YOLOv5 detection model
     def __init__(self, cfg='yolov5s.yaml', ch=3, nc=None, anchors=None):  # model, input channels, number of classes
+        #cfg指模型配置文件；ch表示输入图片通道数，一般是RGB三个通道；nc为数据集的类别个数；anchors一般是none
         super().__init__()
-        if isinstance(cfg, dict):
+        if isinstance(cfg, dict): #如果cfg是一个字典，将cfg字典赋值给self.yaml
             self.yaml = cfg  # model dict
-        else:  # is *.yaml
+        else:  # is *.yaml #如果cfg只是一个模型配置文件
             import yaml  # for torch hub
             self.yaml_file = Path(cfg).name
             with open(cfg, encoding='ascii', errors='ignore') as f:
