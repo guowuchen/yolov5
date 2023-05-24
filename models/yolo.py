@@ -171,13 +171,13 @@ class DetectionModel(BaseModel):
         if isinstance(cfg, dict): #如果cfg是一个字典，将cfg字典赋值给self.yaml
             self.yaml = cfg  # model dict
         else:  # is *.yaml #如果cfg只是一个模型配置文件
-            import yaml  # for torch hub
-            self.yaml_file = Path(cfg).name
+            import yaml  #导入yaml包
+            self.yaml_file = Path(cfg).name #
             with open(cfg, encoding='ascii', errors='ignore') as f:
-                self.yaml = yaml.safe_load(f)  # model dict
+                self.yaml = yaml.safe_load(f)  #将yaml文件转换为字典
 
         # Define model
-        ch = self.yaml['ch'] = self.yaml.get('ch', ch)  # input channels
+        ch = self.yaml['ch'] = self.yaml.get('ch', ch)  #将字典中键为'ch'的值赋值给ch
         if nc and nc != self.yaml['nc']:
             LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
             self.yaml['nc'] = nc  # override yaml value
@@ -189,7 +189,7 @@ class DetectionModel(BaseModel):
         self.inplace = self.yaml.get('inplace', True)
 
         # Build strides, anchors
-        m = self.model[-1]  # Detect()
+        m = self.model[-1]  #将self.model的最后一层网络赋值给m
         if isinstance(m, (Detect, Segment)):
             s = 256  # 2x min stride
             m.inplace = self.inplace
