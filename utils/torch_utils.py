@@ -294,12 +294,12 @@ def model_info(model, verbose=False, imgsz=640):
     LOGGER.info(f'{name} summary: {len(list(model.modules()))} layers, {n_p} parameters, {n_g} gradients{fs}')
 
 
-def scale_img(img, ratio=1.0, same_shape=False, gs=32):  # img(16,3,256,416)
+def scale_img(img, ratio=1.0, same_shape=False, gs=32):  # img(16,3,256,416)，对图片进行缩放的函数，输入的参数有图片，比例
     # Scales img(bs,3,y,x) by ratio constrained to gs-multiple
-    if ratio == 1.0:
+    if ratio == 1.0: #如果比例为1，直接将图片返回
         return img
-    h, w = img.shape[2:]
-    s = (int(h * ratio), int(w * ratio))  # new size
+    h, w = img.shape[2:] #图片的高和宽
+    s = (int(h * ratio), int(w * ratio))  # new size 将图片的高和宽乘以比例因子，返回一个元组赋值给s
     img = F.interpolate(img, size=s, mode='bilinear', align_corners=False)  # resize
     if not same_shape:  # pad/crop img
         h, w = (math.ceil(x * ratio / gs) * gs for x in (h, w))
