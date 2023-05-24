@@ -112,18 +112,18 @@ class BaseModel(nn.Module):
         #x为输入图像；profile=true表示可以做一些性能评估；visualize=true表示可以做一些特征可视化
         return self._forward_once(x, profile, visualize)  # single-scale inference, train
 
-    def _forward_once(self, x, profile=False, visualize=False):
+    def _forward_once(self, x, profile=False, visualize=False): #输入参数为图片
         y, dt = [], []  # outputs
         for m in self.model: #对于模型中的每一层
             if m.f != -1:  #如果不是来自前一层
                 x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
             if profile:
                 self._profile_one_layer(m, x, dt)
-            x = m(x)  # run
-            y.append(x if m.i in self.save else None)  # save output
+            x = m(x)  # run，跑模型
+            y.append(x if m.i in self.save else None)  #将结果保存到列表y中，经过网络每一层训练后的结果都保存在y中
             if visualize:
                 feature_visualization(x, m.type, m.i, save_dir=visualize)
-        return x
+        return x #返回最后的输出结果
 
     def _profile_one_layer(self, m, x, dt):
         c = m == self.model[-1]  # is final layer, copy input as inplace fix
@@ -190,10 +190,10 @@ class DetectionModel(BaseModel):
 
         # Build strides, anchors
         m = self.model[-1]  #将self.model的最后一层网络赋值给m
-        if isinstance(m, (Detect, Segment)):
+        if isinstance(m, (Detect, Segment)): #判断m是否是
             s = 256  # 2x min stride
             m.inplace = self.inplace
-            forward = lambda x: self.forward(x)[0] if isinstance(m, Segment) else self.forward(x)
+            forward = lambda x: self.forward(x)[0] if isinstance(m, Segment) else self.forward(x) 
             m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
             check_anchor_order(m)
             m.anchors /= m.stride.view(-1, 1, 1)
@@ -210,16 +210,17 @@ class DetectionModel(BaseModel):
             return self._forward_augment(x)  # augmented inference, None
         return self._forward_once(x, profile, visualize)  # single-scale inference, train
 
-    def _forward_augment(self, x):
-        img_size = x.shape[-2:]  # height, width
-        s = [1, 0.83, 0.67]  # scales
+    def _forward_augment(self, x): #输入的x为图片
+        img_size = x.shape[-2:]  #x.shape返回的一个[channel,width,height]的列表
+        s = [1, 0.83, 0.67]  # scales 缩放因子
         f = [None, 3, None]  # flips (2-ud, 3-lr)
         y = []  # outputs
         for si, fi in zip(s, f):
-            xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
+            xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max())) #对图像进行缩放
             yi = self._forward_once(xi)[0]  # forward
             # cv2.imwrite(f'img_{si}.jpg', 255 * xi[0].cpu().numpy().transpose((1, 2, 0))[:, :, ::-1])  # save
             yi = self._descale_pred(yi, fi, si, img_size)
+            #将推理结果恢复到相对原图图片尺寸
             y.append(yi)
         y = self._clip_augmented(y)  # clip augmented tails
         return torch.cat(y, 1), None  # augmented inference, train
@@ -298,15 +299,15 @@ class ClassificationModel(BaseModel):
         self.model = None
 
 
-def parse_model(d, ch):  # model_dict, input_channels(3)
+def parse_model(d, ch):  # model_dict, input_channels(3) 解析模型的函数，d为输入的模型字典
     # Parse a YOLOv5 model.yaml dictionary
     LOGGER.info(f"\n{'':>3}{'from':>18}{'n':>3}{'params':>10}  {'module':<40}{'arguments':<30}")
     anchors, nc, gd, gw, act = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple'], d.get('activation')
     if act:
         Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
         LOGGER.info(f"{colorstr('activation:')} {act}")  # print
-    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
-    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
+    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors锚框的数量
+    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5) 
 
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args
@@ -367,7 +368,7 @@ if __name__ == '__main__':
     parser.add_argument('--line-profile', action='store_true', help='profile model speed layer by layer')
     parser.add_argument('--test', action='store_true', help='test all yolo*.yaml')
     opt = parser.parse_args()
-    opt.cfg = check_yaml(opt.cfg)  # check YAML
+    opt.cfg = check_yaml(opt.cfg)  # check YAML 检查yaml文件的合法性
     print_args(vars(opt))
     device = select_device(opt.device)
 
