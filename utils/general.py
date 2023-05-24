@@ -108,13 +108,13 @@ def is_docker() -> bool:
         return False
 
 
-def is_writeable(dir, test=False):
+def is_writeable(dir, test=False): #判断目录是否有写权限的方法，传入参数为目录的路径
     # Return True if directory has write permissions, test opening a file with write permissions if test=True
     if not test:
-        return os.access(dir, os.W_OK)  # possible issues on Windows
-    file = Path(dir) / 'tmp.txt'
+        return os.access(dir, os.W_OK)  #对目录进行访问，如果目录是可以访问的，返回True
+    file = Path(dir) / 'tmp.txt' #file=dir/tmp.txt
     try:
-        with open(file, 'w'):  # open file with write permissions
+        with open(file, 'w'):  #以写的方式打开文件，如果文件可以被写，返回True,否则返回false
             pass
         file.unlink()  # remove file
         return True
@@ -129,7 +129,7 @@ def set_logging(name=LOGGING_NAME, verbose=True): #定义了一个设置日志�
     # sets up logging for the given name
     rank = int(os.getenv('RANK', -1))  # rank in world for Multi-GPU trainings,os.getenv()用于获取环境变量的值，这里用于获取RANK的值
     level = logging.INFO if verbose and rank in {-1, 0} else logging.ERROR #如果verbose为true并且rank的值为0或-1，则将日志level设置为logging.INFO,否则设置为logging.ERROR
-    logging.config.dictConfig({
+    logging.config.dictConfig({ #设置日志的记录器、处理器和格式化器
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
@@ -147,24 +147,24 @@ def set_logging(name=LOGGING_NAME, verbose=True): #定义了一个设置日志�
                 'propagate': False,}}})
 
 
-set_logging(LOGGING_NAME)  # run before defining LOGGER
-LOGGER = logging.getLogger(LOGGING_NAME)  # define globally (used in train.py, val.py, detect.py, etc.)
-if platform.system() == 'Windows':
+set_logging(LOGGING_NAME)  #调用set_logging()方法，传入参数为yolov5
+LOGGER = logging.getLogger(LOGGING_NAME)  #定义了一个记录器，名字为yolov5
+if platform.system() == 'Windows': #如果是在Windows系统上
     for fn in LOGGER.info, LOGGER.warning:
         setattr(LOGGER, fn.__name__, lambda x: fn(emojis(x)))  # emoji safe logging
 
 
-def user_config_dir(dir='Ultralytics', env_var='YOLOV5_CONFIG_DIR'):
+def user_config_dir(dir='Ultralytics', env_var='YOLOV5_CONFIG_DIR'): #定义了一个返回用户配置目录的路径的函数
     # Return path of user configuration directory. Prefer environment variable if exists. Make dir if required.
-    env = os.getenv(env_var)
-    if env:
-        path = Path(env)  # use environment variable
-    else:
-        cfg = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}  # 3 OS dirs
-        path = Path.home() / cfg.get(platform.system(), '')  # OS-specific config dir
-        path = (path if is_writeable(path) else Path('/tmp')) / dir  # GCP and AWS lambda fix, only /tmp is writeable
+    env = os.getenv(env_var) #获取环境变量'YOLOV5_CONFIG_DIR'的值
+    if env: #如果环境变量的值存在
+        path = Path(env)  #将环境变量env转换为path路径对象
+    else: #如果环境变量的值不存在
+        cfg = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}  #定义了一个cfg字典，每一个os对应一个目录
+        path = Path.home() / cfg.get(platform.system(), '')  #windows系统下，path=用户home目录/AppData/Roaming
+        path = (path if is_writeable(path) else Path('/tmp')) / dir  #如果path是可以写的，path=path/Ultralytics，否则path=/tmp/Ultralytics
     path.mkdir(exist_ok=True)  # make if required
-    return path
+    return path #返回path路径
 
 
 CONFIG_DIR = user_config_dir()  # Ultralytics settings dir
@@ -416,15 +416,15 @@ def check_imshow(warn=False):
         return False
 
 
-def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''):
+def check_suffix(file='yolov5s.pt', suffix=('.pt',), msg=''): #检查文件后缀是否合法的方法
     # Check file(s) for acceptable suffix
-    if file and suffix:
-        if isinstance(suffix, str):
-            suffix = [suffix]
+    if file and suffix: #如果传入文件和后缀两个参数
+        if isinstance(suffix, str): #如果后缀是一个字符串
+            suffix = [suffix] #将后缀字符串转换为后缀列表
         for f in file if isinstance(file, (list, tuple)) else [file]:
-            s = Path(f).suffix.lower()  # file suffix
-            if len(s):
-                assert s in suffix, f'{msg}{f} acceptable suffix is {suffix}'
+            s = Path(f).suffix.lower()  #s=文件后缀小写
+            if len(s): #如果文件后缀长度不为0
+                assert s in suffix, f'{msg}{f} acceptable suffix is {suffix}' #如果文件后缀在后缀列表中，打印信息
 
 
 def check_yaml(file, suffix=('.yaml', '.yml')):
@@ -432,11 +432,11 @@ def check_yaml(file, suffix=('.yaml', '.yml')):
     return check_file(file, suffix)
 
 
-def check_file(file, suffix=''):
+def check_file(file, suffix=''): #检查文件是否存在
     # Search/download file (if necessary) and return path
-    check_suffix(file, suffix)  # optional
-    file = str(file)  # convert to str()
-    if os.path.isfile(file) or not file:  # exists
+    check_suffix(file, suffix)  #检查文件后缀是否合法
+    file = str(file)  #将文件名转换为字符串
+    if os.path.isfile(file) or not file: #检查文件是否存在
         return file
     elif file.startswith(('http:/', 'https:/')):  # download
         url = file  # warning: Pathlib turns :// -> :/
@@ -445,7 +445,7 @@ def check_file(file, suffix=''):
             LOGGER.info(f'Found {url} locally at {file}')  # file already exists
         else:
             LOGGER.info(f'Downloading {url} to {file}...')
-            torch.hub.download_url_to_file(url, file)
+            torch.hub.download_url_to_file(url, file) #将url下载到指定文件地址
             assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
         return file
     elif file.startswith('clearml://'):  # ClearML Dataset ID
