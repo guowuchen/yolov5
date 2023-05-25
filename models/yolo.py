@@ -299,10 +299,11 @@ class ClassificationModel(BaseModel):
         self.model = None
 
 
-def parse_model(d, ch):  # model_dict, input_channels(3) 解析模型的函数，d为输入的模型字典
+def parse_model(d, ch):  # model_dict, input_channels(3) 解析模型的函数，d为输入的模型字典，ch代表通道数
     # Parse a YOLOv5 model.yaml dictionary
     LOGGER.info(f"\n{'':>3}{'from':>18}{'n':>3}{'params':>10}  {'module':<40}{'arguments':<30}") #打印信息
     anchors, nc, gd, gw, act = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple'], d.get('activation') #解析yolov5s.yaml文件
+    #gd代表模型的深度因子，gw代表模型的宽度因子，在yolov5s中gd为0.33
     if act: #如果act不为空
         Conv.default_act = eval(act)  # redefine default activation, i.e. Conv.default_act = nn.SiLU()
         LOGGER.info(f"{colorstr('activation:')} {act}")  # print
@@ -310,22 +311,23 @@ def parse_model(d, ch):  # model_dict, input_channels(3) 解析模型的函数�
     no = na * (nc + 5)  # number of outputs = anchors * (classes + 5) 
 
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
-    for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args，args是什么
+    for i, (f, n, m, args) in enumerate(d['backbone'] + d['head']):  # from, number, module, args，f代表和谁连接，-1代表和上一层连接
+        #n代表组件个数，m代表组件名称，args为参数列表
         m = eval(m) if isinstance(m, str) else m  # eval strings 将字符串转为为有效的数值
-        for j, a in enumerate(args):
+        for j, a in enumerate(args): #解析参数列表中的每一个参数
             with contextlib.suppress(NameError):
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
+                args[j] = eval(a) if isinstance(a, str) else a  # eval strings，将参数列表中的每一个字符串转换为数值
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in {
                 Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
                 BottleneckCSP, C3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x}: #如果组件来自于集合中的任何一个元素
-            c1, c2 = ch[f], args[0]
-            if c2 != no:  # if not output
-                c2 = make_divisible(c2 * gw, 8)
+            c1, c2 = ch[f], args[0] #c1代表输入通道数，c2代表输出通道数
+            if c2 != no:  #如果c2不等于输出个数
+                c2 = make_divisible(c2 * gw, 8) #c2乘以宽度因子gw，使得c2*gw可以被8整除
 
-            args = [c1, c2, *args[1:]]
-            if m in {BottleneckCSP, C3, C3TR, C3Ghost, C3x}:
+            args = [c1, c2, *args[1:]] #更新args列表
+            if m in {BottleneckCSP, C3, C3TR, C3Ghost, C3x}: #如果m是这些组件中的一个
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is nn.BatchNorm2d:
@@ -352,11 +354,11 @@ def parse_model(d, ch):  # model_dict, input_channels(3) 解析模型的函数�
         m_.i, m_.f, m_.type, m_.np = i, f, t, np  # attach index, 'from' index, type, number params
         LOGGER.info(f'{i:>3}{str(f):>18}{n_:>3}{np:10.0f}  {t:<40}{str(args):<30}')  # print
         save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
-        layers.append(m_)
+        layers.append(m_) #将组件添加到网络列表中
         if i == 0:
             ch = []
         ch.append(c2)
-    return nn.Sequential(*layers), sorted(save)
+    return nn.Sequential(*layers), sorted(save)#将构建好的网络返回
 
 
 if __name__ == '__main__':
